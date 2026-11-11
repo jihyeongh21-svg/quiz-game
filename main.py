@@ -7,13 +7,16 @@ def menu():
     print("4. 점수확인")
     print("5. 종료")
     print("========================================")
-    choice = input("메뉴 선택: ")
+    choice = input("메뉴 선택: ").strip()
     return choice
 
 
 def main():
     while True:
         choice = menu()
+        if not choice :
+            print("메뉴를 선택해 주세요!")
+            continue
         if choice == '1':
             print("퀴즈시작")
         elif choice == '2':
