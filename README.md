@@ -29,7 +29,9 @@ python3 main.py
 ## 파일 구조
 ```
 quiz-game/
-├── main.py       # Quiz, QuizGame 클래스와 실행 진입점
+├── main.py       # 실행 진입점
+├── quiz.py       # Quiz 클래스 (문제, 출력, 정답 확인)
+├── quiz_game.py  # QuizGame 클래스 (메뉴, 기능, 저장/불러오기)
 ├── state.json    # 실행 후 생성되는 저장 데이터 (git 제외)
 ├── .gitignore
 └── README.md
