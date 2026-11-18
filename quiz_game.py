@@ -22,12 +22,12 @@ class QuizGame:
     def default_quizzes():
         """주제: 파이썬 기초 문법 퀴즈 6개."""
         return [
-            Quiz("Python의 창시자는?", ["Guido van Rossum", "Linus Torvalds", "Bjarne Stroustrup", "James Gosling"], 1),
-            Quiz("리스트를 나타내는 기호는?", ["()", "[]", "{}", "<>"], 2),
-            Quiz("정수 자료형의 이름은?", ["str", "bool", "int", "dict"], 3),
-            Quiz("반복 횟수가 정해진 반복에 주로 쓰는 문법은?", ["if", "for", "def", "try"], 2),
-            Quiz("함수를 정의할 때 쓰는 키워드는?", ["func", "lambda", "define", "def"], 4),
-            Quiz("키-값 쌍으로 데이터를 저장하는 자료형은?", ["dict", "list", "tuple", "set"], 1),
+            Quiz("Python의 창시자는?", ["Guido van Rossum", "Linus Torvalds", "Bjarne Stroustrup", "James Gosling"], 1, "네덜란드 출신 프로그래머입니다."),
+            Quiz("리스트를 나타내는 기호는?", ["()", "[]", "{}", "<>"], 2, "대괄호를 씁니다."),
+            Quiz("정수 자료형의 이름은?", ["str", "bool", "int", "dict"], 3, "integer의 줄임말입니다."),
+            Quiz("반복 횟수가 정해진 반복에 주로 쓰는 문법은?", ["if", "for", "def", "try"], 2, "range()와 자주 함께 씁니다."),
+            Quiz("함수를 정의할 때 쓰는 키워드는?", ["func", "lambda", "define", "def"], 4, "define의 앞 세 글자입니다."),
+            Quiz("키-값 쌍으로 데이터를 저장하는 자료형은?", ["dict", "list", "tuple", "set"], 1, "dictionary(사전)의 줄임말입니다."),
         ]
 
     # ----- 저장 / 불러오기 -----
@@ -42,7 +42,7 @@ class QuizGame:
                 data = json.load(f)
             quizzes = [Quiz.from_dict(item) for item in data["quizzes"]]
             best = data["best_score"]
-            if best is not None and (not isinstance(best, int) or isinstance(best, bool) or best < 0):
+            if best is not None and (not isinstance(best, (int, float)) or isinstance(best, bool) or best < 0):
                 raise ValueError("잘못된 최고 점수")
         except FileNotFoundError:
             return  # 첫 실행: 기본 퀴즈 사용
@@ -109,6 +109,23 @@ class QuizGame:
         print("4. 점수 확인")
         print("5. 종료")
 
+    HINT_PENALTY = 0.5  # 힌트를 쓰고 맞히면 1점 대신 이 점수만 받는다
+
+    def ask_answer(self, quiz):
+        """정답 번호를 입력받는다. 힌트가 있는 문제는 0을 입력하면 힌트를 보여준다.
+        (정답 번호, 힌트 사용 여부)를 반환한다."""
+        if not quiz.hint:
+            return self.read_int("정답 번호(1~4): ", 1, 4), False
+        value = self.read_int("정답 번호(1~4, 0=힌트): ", 0, 4)
+        if value != 0:
+            return value, False
+        print(f"힌트: {quiz.hint}  (맞혀도 {self.HINT_PENALTY}점만 받습니다)")
+        return self.read_int("정답 번호(1~4): ", 1, 4), True
+
+    @staticmethod
+    def format_score(score):
+        return f"{score:g}"
+
     def play(self):
         if not self.quizzes:
             print("등록된 퀴즈가 없습니다.")
@@ -117,14 +134,18 @@ class QuizGame:
         count = self.read_int(f"풀 문제 수(1~{total}): ", 1, total)
         selected = random.sample(self.quizzes, count)  # 무작위 순서, 중복 없음
         score = 0
+        correct = 0
         for number, quiz in enumerate(selected, start=1):
             quiz.display(number)
-            if quiz.is_correct(self.read_int("정답 번호(1~4): ", 1, 4)):
-                print("정답입니다!")
-                score += 1
+            user_answer, used_hint = self.ask_answer(quiz)
+            if quiz.is_correct(user_answer):
+                gained = self.HINT_PENALTY if used_hint else 1
+                print(f"정답입니다! (+{self.format_score(gained)}점)")
+                score += gained
+                correct += 1
             else:
                 print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
-        print(f"\n결과: {count}문제 중 {score}문제 정답")
+        print(f"\n결과: {count}문제 중 {correct}문제 정답, 점수 {self.format_score(score)}점")
         self.update_best_score(score)
 
     def update_best_score(self, score):
@@ -137,7 +158,8 @@ class QuizGame:
         question = self.read_text("문제: ")
         choices = [self.read_text(f"선택지 {i}: ") for i in range(1, 5)]
         answer = self.read_int("정답 번호(1~4): ", 1, 4)
-        self.quizzes.append(Quiz(question, choices, answer))
+        hint = input("힌트(없으면 Enter): ").strip()
+        self.quizzes.append(Quiz(question, choices, answer, hint))
         self.save_state()
         print("퀴즈가 추가되었습니다.")
 
@@ -153,7 +175,7 @@ class QuizGame:
         if self.best_score is None:
             print("아직 퀴즈를 푼 기록이 없습니다.")
         else:
-            print(f"최고 점수: {self.best_score}점")
+            print(f"최고 점수: {self.format_score(self.best_score)}점")
 
     @staticmethod
     def handle_sigterm(signum, frame):
