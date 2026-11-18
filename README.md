@@ -35,6 +35,10 @@ python3 main.py
 |---|---|
 | ![add_quiz](docs/screenshots/add_quiz.png) | ![score](docs/screenshots/score.png) |
 
+| 퀴즈 목록 |
+|---|
+| ![list](docs/screenshots/list.png) |
+
 ## 파일 구조
 ```
 quiz-game/
