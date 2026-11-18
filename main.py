@@ -76,6 +76,24 @@ def play_quiz(quizzes):
     return score
 
 
+def read_text(prompt):
+    """빈 문자열이 아닌 텍스트를 입력받는다."""
+    while True:
+        text = input(prompt).strip()
+        if text:
+            return text
+        print("입력이 비어 있습니다. 다시 입력해 주세요.")
+
+
+def add_quiz(quizzes):
+    """사용자에게 문제·선택지 4개·정답 번호를 입력받아 추가한다."""
+    question = read_text("문제: ")
+    choices = [read_text(f"선택지 {i}: ") for i in range(1, 5)]
+    answer = read_int("정답 번호(1~4): ", 1, 4)
+    quizzes.append(Quiz(question, choices, answer))
+    print("퀴즈가 추가되었습니다.")
+
+
 def main():
     quizzes = create_default_quizzes()
     while True:
@@ -83,6 +101,8 @@ def main():
         choice = read_int("선택: ", 1, 5)
         if choice == 1:
             play_quiz(quizzes)
+        elif choice == 2:
+            add_quiz(quizzes)
         elif choice == 5:
             print("게임을 종료합니다.")
             break
