@@ -2,6 +2,7 @@
 
 import json
 import os
+import random
 import signal
 
 from quiz import Quiz
@@ -112,15 +113,18 @@ class QuizGame:
         if not self.quizzes:
             print("등록된 퀴즈가 없습니다.")
             return
+        total = len(self.quizzes)
+        count = self.read_int(f"풀 문제 수(1~{total}): ", 1, total)
+        selected = random.sample(self.quizzes, count)  # 무작위 순서, 중복 없음
         score = 0
-        for number, quiz in enumerate(self.quizzes, start=1):
+        for number, quiz in enumerate(selected, start=1):
             quiz.display(number)
             if quiz.is_correct(self.read_int("정답 번호(1~4): ", 1, 4)):
                 print("정답입니다!")
                 score += 1
             else:
                 print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
-        print(f"\n결과: {len(self.quizzes)}문제 중 {score}문제 정답")
+        print(f"\n결과: {count}문제 중 {score}문제 정답")
         self.update_best_score(score)
 
     def update_best_score(self, score):
