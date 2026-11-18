@@ -23,7 +23,8 @@ python3 main.py
 - 퀴즈 추가: 문제·선택지 4개·정답 번호 입력 검증 후 파일 저장
 - 퀴즈 목록 조회
 - 최고 점수 확인 및 풀이 시 자동 갱신·저장
-- `Ctrl+C` / 입력 종료(EOF) 시 저장 후 안전 종료
+- **[보너스]** 랜덤 출제 / 풀 문제 수 선택 / 힌트(사용 시 점수 차감) / 퀴즈 삭제 / 플레이 기록 히스토리
+- `Ctrl+C` / 입력 종료(EOF) / SIGTERM 시 저장 후 안전 종료
 - 데이터 파일 없음 → 기본 퀴즈 사용, 손상 → 안내 후 기본 퀴즈로 복구
 
 ## 실행 화면
@@ -51,6 +52,18 @@ quiz-game/
 └── README.md
 ```
 
+## 보너스 기능
+| 기능 | 사용법 / 동작 |
+|---|---|
+| 랜덤 출제 | `random.sample`로 문제 순서를 섞고 중복 없이 출제 |
+| 문제 수 선택 | 풀이 시작 시 1~전체 개수 사이로 입력 |
+| 힌트 | 힌트가 있는 문제에서 `0` 입력 → 힌트 표시. 그 문제는 맞혀도 1점 대신 0.5점 |
+| 퀴즈 삭제 | 메뉴 5번 → 번호 선택(0=취소) → 즉시 `state.json` 반영 |
+| 플레이 기록 | 메뉴 6번. 풀이가 끝날 때마다 날짜/시간·푼 문제 수·점수를 저장하고 최근 10건 표시 |
+
+점수는 정답 1점(힌트 사용 시 0.5점)의 합이며, 최고 점수는 풀이 문제 수와 관계없이 점수 자체로 비교합니다.
+퀴즈 추가 시 힌트는 선택 입력(Enter로 건너뜀)입니다.
+
 ## 설계 설명
 
 ### 클래스를 사용한 이유와 책임 분리
@@ -70,7 +83,7 @@ quiz-game/
 
 ### state.json 로드·저장 시점
 1. **로드**: `QuizGame()` 생성 시 `load_state()`가 한 번 실행됩니다. 파일이 없으면 기본 퀴즈, 손상되면 안내 후 `state.json.corrupt`로 원본을 보관하고 기본 퀴즈로 초기화·재저장합니다.
-2. **저장**: 퀴즈 추가 직후, 최고 점수 갱신 직후, `Ctrl+C`/EOF/SIGTERM 종료 시 `save_state()`가 실행됩니다.
+2. **저장**: 퀴즈 추가·삭제 직후, 풀이 종료 직후(기록·최고 점수), `Ctrl+C`/EOF/SIGTERM 종료 시 `save_state()`가 실행됩니다.
 3. 정상 종료(메뉴 5번)는 변경이 있을 때마다 이미 저장했으므로 추가 저장이 필요 없습니다.
 
 ### 예외 처리와 복구
@@ -87,10 +100,10 @@ quiz-game/
 ### 요구사항이 바뀔 때 수정할 곳
 | 변경 | 수정 대상 |
 |---|---|
-| 점수 계산 방식(힌트 감점 등) | `QuizGame.play`, `update_best_score`, 필요 시 `Quiz` 속성 |
-| 퀴즈 항목 추가(힌트 등) | `Quiz.__init__`, `to_dict`, `from_dict`, `add_quiz`, 기본 퀴즈 |
+| 점수 계산 방식(힌트 감점 등) | `QuizGame.HINT_PENALTY`, `ask_answer`, `play`, `update_best_score` |
+| 퀴즈 항목 추가 | `Quiz.__init__`, `to_dict`, `from_dict`, `add_quiz`, 기본 퀴즈 |
 | 저장 형식 변경 | `load_state`, `save_state`, `Quiz.to_dict/from_dict` |
-| 메뉴 추가 | `show_menu`, `run`의 `actions`, 새 메서드 |
+| 메뉴 추가 | `QuizGame.menu_items`에 (이름, 메서드) 한 줄 + 새 메서드 |
 
 ### 기본 퀴즈 (파이썬 기초 6문제)
 | # | 문제 | 정답 |
@@ -124,12 +137,17 @@ JSON은 사람이 읽기 쉽고 list/dict 구조를 그대로 저장할 수 있�
 ```json
 {
     "quizzes": [
-        {"question": "Python의 창시자는?", "choices": ["Guido", "Linus", "Bjarne", "James"], "answer": 1}
+        {"question": "Python의 창시자는?", "choices": ["Guido", "Linus", "Bjarne", "James"], "answer": 1, "hint": "네덜란드 출신입니다."}
     ],
-    "best_score": 3
+    "best_score": 3,
+    "history": [
+        {"played_at": "2026-11-18 10:40:48", "total": 6, "score": 3.5}
+    ]
 }
 ```
 - `quizzes`: 퀴즈 목록. `answer`는 1~4 정답 번호
+- `hint`: 힌트 문구 (없으면 빈 문자열, 이전 형식 파일에서는 생략 가능)
+- `history`: 풀이 기록 목록 (이전 형식 파일에서는 생략 가능)
 - `best_score`: 최고 점수 (아직 풀지 않았다면 `null`)
 
 > clone 실습: 복제본에서 추가하고 pull로 가져온 한 줄입니다.
