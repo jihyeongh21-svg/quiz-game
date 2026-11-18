@@ -4,6 +4,7 @@ import json
 import os
 import random
 import signal
+from datetime import datetime
 
 from quiz import Quiz
 
@@ -16,6 +17,7 @@ class QuizGame:
     def __init__(self):
         self.quizzes = self.default_quizzes()
         self.best_score = None
+        self.history = []  # [{"played_at", "total", "score"}, ...]
         self.load_state()
 
     @staticmethod
@@ -34,6 +36,7 @@ class QuizGame:
     def reset_to_default(self):
         self.quizzes = self.default_quizzes()
         self.best_score = None
+        self.history = []
 
     def load_state(self):
         """state.json을 읽는다. 없으면 기본값, 손상되면 기본값으로 복구."""
@@ -42,6 +45,7 @@ class QuizGame:
                 data = json.load(f)
             quizzes = [Quiz.from_dict(item) for item in data["quizzes"]]
             best = data["best_score"]
+            history = [self.validate_record(r) for r in data.get("history", [])]
             if best is not None and (not isinstance(best, (int, float)) or isinstance(best, bool) or best < 0):
                 raise ValueError("잘못된 최고 점수")
         except FileNotFoundError:
@@ -55,7 +59,16 @@ class QuizGame:
         except OSError as e:
             print(f"데이터 파일을 읽을 수 없어 기본 퀴즈를 사용합니다. ({e})")
             return
-        self.quizzes, self.best_score = quizzes, best
+        self.quizzes, self.best_score, self.history = quizzes, best, history
+
+    @staticmethod
+    def validate_record(record):
+        """기록 한 건의 형식을 검사한다. 잘못되면 ValueError(KeyError/TypeError)."""
+        played_at, total, score = record["played_at"], record["total"], record["score"]
+        is_num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0
+        if not (isinstance(played_at, str) and is_num(total) and is_num(score)):
+            raise ValueError("잘못된 기록 형식")
+        return {"played_at": played_at, "total": total, "score": score}
 
     def backup_corrupt_file(self):
         """손상된 파일을 state.json.corrupt로 보존해 사용자가 복구할 수 있게 한다."""
@@ -67,7 +80,8 @@ class QuizGame:
             print(f"손상된 파일을 백업하지 못했습니다: {e}")
 
     def save_state(self):
-        data = {"quizzes": [q.to_dict() for q in self.quizzes], "best_score": self.best_score}
+        data = {"quizzes": [q.to_dict() for q in self.quizzes], "best_score": self.best_score,
+                "history": self.history}
         try:
             with open(STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
@@ -109,6 +123,7 @@ class QuizGame:
             ("퀴즈 목록", self.list_quizzes),
             ("점수 확인", self.show_best_score),
             ("퀴즈 삭제", self.delete_quiz),
+            ("플레이 기록", self.show_history),
             ("종료", None),
         ]
 
@@ -154,7 +169,13 @@ class QuizGame:
             else:
                 print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
         print(f"\n결과: {count}문제 중 {correct}문제 정답, 점수 {self.format_score(score)}점")
+        self.history.append({
+            "played_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total": count,
+            "score": score,
+        })
         self.update_best_score(score)
+        self.save_state()  # 기록은 최고 점수 갱신 여부와 상관없이 저장
 
     def update_best_score(self, score):
         if self.best_score is None or score > self.best_score:
@@ -191,6 +212,14 @@ class QuizGame:
         removed = self.quizzes.pop(number - 1)
         self.save_state()
         print(f"삭제했습니다: {removed.question}")
+
+    def show_history(self, limit=10):
+        if not self.history:
+            print("아직 플레이 기록이 없습니다.")
+            return
+        print(f"\n--- 플레이 기록 (최근 {min(limit, len(self.history))}건 / 전체 {len(self.history)}건) ---")
+        for record in self.history[-limit:]:
+            print(f"{record['played_at']}  {record['total']}문제  {self.format_score(record['score'])}점")
 
     def show_best_score(self):
         if self.best_score is None:
