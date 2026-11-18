@@ -58,14 +58,36 @@ def show_menu():
     print("5. 종료")
 
 
+def play_quiz(quizzes):
+    """모든 퀴즈를 순서대로 출제하고 맞힌 개수를 반환한다. 퀴즈가 없으면 None."""
+    if not quizzes:
+        print("등록된 퀴즈가 없습니다.")
+        return None
+    score = 0
+    for number, quiz in enumerate(quizzes, start=1):
+        quiz.display(number)
+        user_answer = read_int("정답 번호(1~4): ", 1, 4)
+        if quiz.is_correct(user_answer):
+            print("정답입니다!")
+            score += 1
+        else:
+            print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
+    print(f"\n결과: {len(quizzes)}문제 중 {score}문제 정답")
+    return score
+
+
 def main():
+    quizzes = create_default_quizzes()
     while True:
         show_menu()
         choice = read_int("선택: ", 1, 5)
-        if choice == 5:
+        if choice == 1:
+            play_quiz(quizzes)
+        elif choice == 5:
             print("게임을 종료합니다.")
             break
-        print("(준비 중인 기능입니다)")
+        else:
+            print("(준비 중인 기능입니다)")
 
 
 if __name__ == "__main__":
