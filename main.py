@@ -19,6 +19,18 @@ class Quiz:
         return user_answer == self.answer
 
 
+def create_default_quizzes():
+    """주제: 파이썬 기초 문법 퀴즈 6개."""
+    return [
+        Quiz("Python의 창시자는?", ["Guido van Rossum", "Linus Torvalds", "Bjarne Stroustrup", "James Gosling"], 1),
+        Quiz("리스트를 나타내는 기호는?", ["()", "[]", "{}", "<>"], 2),
+        Quiz("정수 자료형의 이름은?", ["str", "bool", "int", "dict"], 3),
+        Quiz("반복 횟수가 정해진 반복에 주로 쓰는 문법은?", ["if", "for", "def", "try"], 2),
+        Quiz("함수를 정의할 때 쓰는 키워드는?", ["func", "lambda", "define", "def"], 4),
+        Quiz("키-값 쌍으로 데이터를 저장하는 자료형은?", ["dict", "list", "tuple", "set"], 1),
+    ]
+
+
 def read_int(prompt, low, high):
     """low~high 사이 정수를 입력받는다. 잘못된 입력이면 재입력."""
     while True:
