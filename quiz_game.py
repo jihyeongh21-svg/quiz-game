@@ -101,13 +101,21 @@ class QuizGame:
             print("입력이 비어 있습니다. 다시 입력해 주세요.")
 
     # ----- 기능 -----
+    def menu_items(self):
+        """(메뉴 이름, 실행할 메서드) 목록. 마지막 항목은 종료."""
+        return [
+            ("퀴즈 풀기", self.play),
+            ("퀴즈 추가", self.add_quiz),
+            ("퀴즈 목록", self.list_quizzes),
+            ("점수 확인", self.show_best_score),
+            ("퀴즈 삭제", self.delete_quiz),
+            ("종료", None),
+        ]
+
     def show_menu(self):
         print("\n===== 파이썬 퀴즈 게임 =====")
-        print("1. 퀴즈 풀기")
-        print("2. 퀴즈 추가")
-        print("3. 퀴즈 목록")
-        print("4. 점수 확인")
-        print("5. 종료")
+        for number, (label, _) in enumerate(self.menu_items(), start=1):
+            print(f"{number}. {label}")
 
     HINT_PENALTY = 0.5  # 힌트를 쓰고 맞히면 1점 대신 이 점수만 받는다
 
@@ -171,6 +179,19 @@ class QuizGame:
         for number, quiz in enumerate(self.quizzes, start=1):
             print(f"{number}. {quiz.question}")
 
+    def delete_quiz(self):
+        if not self.quizzes:
+            print("삭제할 퀴즈가 없습니다.")
+            return
+        self.list_quizzes()
+        number = self.read_int("삭제할 번호(0=취소): ", 0, len(self.quizzes))
+        if number == 0:
+            print("삭제를 취소했습니다.")
+            return
+        removed = self.quizzes.pop(number - 1)
+        self.save_state()
+        print(f"삭제했습니다: {removed.question}")
+
     def show_best_score(self):
         if self.best_score is None:
             print("아직 퀴즈를 푼 기록이 없습니다.")
@@ -184,15 +205,16 @@ class QuizGame:
 
     def run(self):
         signal.signal(signal.SIGTERM, self.handle_sigterm)
-        actions = {1: self.play, 2: self.add_quiz, 3: self.list_quizzes, 4: self.show_best_score}
+        items = self.menu_items()
         try:
             while True:
                 self.show_menu()
-                choice = self.read_int("선택: ", 1, 5)
-                if choice == 5:
+                choice = self.read_int("선택: ", 1, len(items))
+                action = items[choice - 1][1]
+                if action is None:
                     print("게임을 종료합니다.")
                     break
-                actions[choice]()
+                action()
         except (KeyboardInterrupt, EOFError):
             print("\n입력이 중단되었습니다. 저장 후 안전하게 종료합니다.")
             self.save_state()
