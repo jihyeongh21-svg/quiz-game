@@ -26,6 +26,15 @@ python3 main.py
 - `Ctrl+C` / 입력 종료(EOF) 시 저장 후 안전 종료
 - 데이터 파일 없음 → 기본 퀴즈 사용, 손상 → 안내 후 기본 퀴즈로 복구
 
+## 실행 화면
+| 메뉴 | 퀴즈 풀기 |
+|---|---|
+| ![menu](docs/screenshots/menu.png) | ![play](docs/screenshots/play.png) |
+
+| 퀴즈 추가 | 점수 확인 |
+|---|---|
+| ![add_quiz](docs/screenshots/add_quiz.png) | ![score](docs/screenshots/score.png) |
+
 ## 파일 구조
 ```
 quiz-game/
@@ -33,6 +42,7 @@ quiz-game/
 ├── quiz.py       # Quiz 클래스 (문제, 출력, 정답 확인)
 ├── quiz_game.py  # QuizGame 클래스 (메뉴, 기능, 저장/불러오기)
 ├── state.json    # 실행 후 생성되는 저장 데이터 (git 제외)
+├── docs/screenshots/  # 실행 화면 스크린샷
 ├── .gitignore
 └── README.md
 ```
