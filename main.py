@@ -1,6 +1,24 @@
 """터미널 퀴즈 게임."""
 
 
+class Quiz:
+    """객관식 퀴즈 한 문제."""
+
+    def __init__(self, question, choices, answer):
+        self.question = question
+        self.choices = choices  # 선택지 4개
+        self.answer = answer    # 정답 번호 (1~4)
+
+    def display(self, number=None):
+        title = f"[문제 {number}] " if number else ""
+        print(f"\n{title}{self.question}")
+        for i, choice in enumerate(self.choices, start=1):
+            print(f"  {i}. {choice}")
+
+    def is_correct(self, user_answer):
+        return user_answer == self.answer
+
+
 def read_int(prompt, low, high):
     """low~high 사이 정수를 입력받는다. 잘못된 입력이면 재입력."""
     while True:
