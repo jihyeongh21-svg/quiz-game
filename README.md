@@ -48,3 +48,5 @@ quiz-game/
 ```
 - `quizzes`: 퀴즈 목록. `answer`는 1~4 정답 번호
 - `best_score`: 최고 점수 (아직 풀지 않았다면 `null`)
+
+> clone 실습: 복제본에서 추가하고 pull로 가져온 한 줄입니다.
