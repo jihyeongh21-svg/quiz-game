@@ -2,6 +2,7 @@
 
 import json
 import os
+import signal
 
 from quiz import Quiz
 
@@ -46,6 +47,7 @@ class QuizGame:
             return  # 첫 실행: 기본 퀴즈 사용
         except (json.JSONDecodeError, KeyError, TypeError, ValueError, UnicodeDecodeError):
             print("데이터 파일이 손상되어 기본 퀴즈로 초기화합니다.")
+            self.backup_corrupt_file()
             self.reset_to_default()
             self.save_state()
             return
@@ -53,6 +55,15 @@ class QuizGame:
             print(f"데이터 파일을 읽을 수 없어 기본 퀴즈를 사용합니다. ({e})")
             return
         self.quizzes, self.best_score = quizzes, best
+
+    def backup_corrupt_file(self):
+        """손상된 파일을 state.json.corrupt로 보존해 사용자가 복구할 수 있게 한다."""
+        backup = STATE_FILE + ".corrupt"
+        try:
+            os.replace(STATE_FILE, backup)
+            print(f"손상된 원본은 '{os.path.basename(backup)}'로 보관했습니다.")
+        except OSError as e:
+            print(f"손상된 파일을 백업하지 못했습니다: {e}")
 
     def save_state(self):
         data = {"quizzes": [q.to_dict() for q in self.quizzes], "best_score": self.best_score}
@@ -140,7 +151,13 @@ class QuizGame:
         else:
             print(f"최고 점수: {self.best_score}점")
 
+    @staticmethod
+    def handle_sigterm(signum, frame):
+        """SIGTERM(종료 요청)을 KeyboardInterrupt와 같은 안전 종료 경로로 보낸다."""
+        raise KeyboardInterrupt
+
     def run(self):
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
         actions = {1: self.play, 2: self.add_quiz, 3: self.list_quizzes, 4: self.show_best_score}
         try:
             while True:

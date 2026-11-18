@@ -226,3 +226,4 @@ __marimo__/
 state.json
 .vscode/
 .DS_Store
+state.json.corrupt
