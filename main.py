@@ -1,5 +1,10 @@
 """터미널 퀴즈 게임."""
 
+import json
+import os
+
+STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state.json")
+
 
 class Quiz:
     """객관식 퀴즈 한 문제."""
@@ -18,6 +23,24 @@ class Quiz:
     def is_correct(self, user_answer):
         return user_answer == self.answer
 
+    def to_dict(self):
+        return {"question": self.question, "choices": self.choices, "answer": self.answer}
+
+    @classmethod
+    def from_dict(cls, data):
+        """dict에서 Quiz를 만든다. 형식이 잘못되면 ValueError."""
+        question, choices, answer = data["question"], data["choices"], data["answer"]
+        valid = (
+            isinstance(question, str) and question.strip()
+            and isinstance(choices, list) and len(choices) == 4
+            and all(isinstance(c, str) for c in choices)
+            and isinstance(answer, int) and not isinstance(answer, bool)
+            and 1 <= answer <= 4
+        )
+        if not valid:
+            raise ValueError("잘못된 퀴즈 형식")
+        return cls(question, choices, answer)
+
 
 class QuizGame:
     """메뉴, 퀴즈 목록, 최고 점수를 관리하는 게임 본체."""
@@ -25,6 +48,7 @@ class QuizGame:
     def __init__(self):
         self.quizzes = self.default_quizzes()
         self.best_score = None
+        self.load_state()
 
     @staticmethod
     def default_quizzes():
@@ -37,6 +61,40 @@ class QuizGame:
             Quiz("함수를 정의할 때 쓰는 키워드는?", ["func", "lambda", "define", "def"], 4),
             Quiz("키-값 쌍으로 데이터를 저장하는 자료형은?", ["dict", "list", "tuple", "set"], 1),
         ]
+
+    # ----- 저장 / 불러오기 -----
+    def reset_to_default(self):
+        self.quizzes = self.default_quizzes()
+        self.best_score = None
+
+    def load_state(self):
+        """state.json을 읽는다. 없으면 기본값, 손상되면 기본값으로 복구."""
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            quizzes = [Quiz.from_dict(item) for item in data["quizzes"]]
+            best = data["best_score"]
+            if best is not None and (not isinstance(best, int) or isinstance(best, bool) or best < 0):
+                raise ValueError("잘못된 최고 점수")
+        except FileNotFoundError:
+            return  # 첫 실행: 기본 퀴즈 사용
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, UnicodeDecodeError):
+            print("데이터 파일이 손상되어 기본 퀴즈로 초기화합니다.")
+            self.reset_to_default()
+            self.save_state()
+            return
+        except OSError as e:
+            print(f"데이터 파일을 읽을 수 없어 기본 퀴즈를 사용합니다. ({e})")
+            return
+        self.quizzes, self.best_score = quizzes, best
+
+    def save_state(self):
+        data = {"quizzes": [q.to_dict() for q in self.quizzes], "best_score": self.best_score}
+        try:
+            with open(STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        except OSError as e:
+            print(f"저장에 실패했습니다: {e}")
 
     # ----- 입력 처리 -----
     def read_int(self, prompt, low, high):
@@ -92,12 +150,14 @@ class QuizGame:
         if self.best_score is None or score > self.best_score:
             self.best_score = score
             print("최고 점수를 갱신했습니다!")
+            self.save_state()
 
     def add_quiz(self):
         question = self.read_text("문제: ")
         choices = [self.read_text(f"선택지 {i}: ") for i in range(1, 5)]
         answer = self.read_int("정답 번호(1~4): ", 1, 4)
         self.quizzes.append(Quiz(question, choices, answer))
+        self.save_state()
         print("퀴즈가 추가되었습니다.")
 
     def list_quizzes(self):
@@ -116,13 +176,17 @@ class QuizGame:
 
     def run(self):
         actions = {1: self.play, 2: self.add_quiz, 3: self.list_quizzes, 4: self.show_best_score}
-        while True:
-            self.show_menu()
-            choice = self.read_int("선택: ", 1, 5)
-            if choice == 5:
-                print("게임을 종료합니다.")
-                break
-            actions[choice]()
+        try:
+            while True:
+                self.show_menu()
+                choice = self.read_int("선택: ", 1, 5)
+                if choice == 5:
+                    print("게임을 종료합니다.")
+                    break
+                actions[choice]()
+        except (KeyboardInterrupt, EOFError):
+            print("\n입력이 중단되었습니다. 저장 후 안전하게 종료합니다.")
+            self.save_state()
 
 
 if __name__ == "__main__":
